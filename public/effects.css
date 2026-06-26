@@ -1,0 +1,150 @@
+/* =========================================================
+ * 3D-scrollable experience + interaction layer (from scratch).
+ * Three.js used only as a permitted 3D framework (PRD §2).
+ * No animation libraries. Honors prefers-reduced-motion.
+ * ======================================================= */
+
+/* ---------- Scroll fade effect (CSS transition removed — JS rAF handles smooth updates) ---------- */
+html { scroll-behavior: smooth; }
+body { background: var(--bg); }
+main {
+  perspective: 900px;
+  perspective-origin: 50% 0%;
+}
+main > section {
+  will-change: opacity;
+}
+
+/* Global "transition on everything" for interactive + structural bits. */
+a, button, select, .bento__node, .plan, .quote, .logos li,
+.toggle__btn, .accordion__item, .accordion__chev, .eyebrow, .plan__badge {
+  transition:
+    transform var(--t-micro) var(--e-micro),
+    color var(--t-micro) var(--e-micro),
+    background-color var(--t-micro) var(--e-micro),
+    border-color var(--t-micro) var(--e-micro),
+    box-shadow var(--t-micro) var(--e-micro),
+    opacity var(--t-micro) var(--e-micro);
+}
+
+/* ---------- 3D background canvas (fixed, persistent across all sections) ---------- */
+#bg-canvas {
+  position: fixed; inset: 0; width: 100%; height: 100%;
+  z-index: 0; pointer-events: none;
+}
+.hero__glow { z-index: 1; transition: transform 200ms ease-out; }
+
+/* ---------- Custom cursor ---------- */
+@media (hover: hover) and (pointer: fine) {
+  body.has-custom-cursor { cursor: none; }
+  body.has-custom-cursor a,
+  body.has-custom-cursor button,
+  body.has-custom-cursor select,
+  body.has-custom-cursor [tabindex] { cursor: none; }
+
+  .cursor, .cursor-dot {
+    position: fixed; top: 0; left: 0; z-index: 9999; pointer-events: none;
+    border-radius: 50%; will-change: transform, width, height;
+  }
+  .cursor {
+    width: 34px; height: 34px; border: 1.5px solid var(--accent);
+    transition: width 200ms ease-out, height 200ms ease-out,
+                background-color 200ms ease-out, border-color 200ms ease-out;
+    mix-blend-mode: difference;
+  }
+  .cursor-dot { width: 6px; height: 6px; background: var(--accent); }
+  .cursor.is-hover { width: 58px; height: 58px; background: rgba(217,232,226,0.12); }
+  .cursor.is-click { width: 56px !important; height: 56px !important; background: rgba(217,232,226,0.08); border-color: rgba(217,232,226,0.6); }
+  .cursor-click-ripple {
+    position: fixed; pointer-events: none; z-index: 9998;
+    border-radius: 50%; width: 34px; height: 34px;
+    margin-left: -17px; margin-top: -17px;
+    border: 1.5px solid var(--accent);
+    animation: cursorClickRipple 600ms ease-out forwards;
+  }
+  @keyframes cursorClickRipple {
+    0% { transform: scale(1); opacity: 0.4; }
+    100% { transform: scale(3.5); opacity: 0; }
+  }
+}
+.cursor-particle {
+  position: fixed; pointer-events: none; z-index: 9998;
+  border-radius: 50%; width: 4px; height: 4px;
+  margin-left: -2px; margin-top: -2px;
+  background: var(--accent);
+  animation: cursorParticle 1200ms ease-out forwards;
+}
+@keyframes cursorParticle {
+  0% { transform: scale(1) translate(0,0); opacity: 0.5; }
+  100% { transform: scale(0) translate(var(--p-dx,-4px),var(--p-dy,-4px)); opacity: 0; }
+}
+.cursor, .cursor-dot { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  body.has-custom-cursor .cursor,
+  body.has-custom-cursor .cursor-dot { display: block; }
+}
+
+/* ---------- Scroll reveal (cards / sections) — 3D transforms ---------- */
+[data-anim] { opacity: 0; will-change: transform, opacity; }
+[data-anim="up"]    { transform: translateY(44px) rotateX(6deg); }
+[data-anim="scale"] { transform: scale(0.88) translateZ(-20px); }
+[data-anim="left"]  { transform: translateX(-46px) rotateY(5deg); }
+[data-anim="right"] { transform: translateX(46px) rotateY(-5deg); }
+[data-anim].is-visible {
+  opacity: 1; transform: none;
+  transition: opacity var(--t-struct) var(--e-struct),
+              transform var(--t-struct) var(--e-struct);
+  transition-delay: var(--anim-delay, 0ms);
+}
+/* No-flash fallback: until JS confirms it runs (adds .js-anim to <html>),
+   all reveal targets stay fully visible. */
+html:not(.js-anim) [data-anim],
+html:not(.js-anim) .mask-reveal,
+html:not(.js-anim) .reveal { opacity: 1 !important; transform: none !important; clip-path: none !important; }
+
+/* ---------- On-hover 3D reveal tilt ---------- */
+.tilt-3d {
+  transform-style: preserve-3d;
+  transition: transform 200ms var(--e-micro), box-shadow 200ms var(--e-micro);
+}
+.tilt-3d:hover { box-shadow: 0 24px 60px -28px rgba(23,43,54,0.8); }
+.tilt-3d .bento__icon,
+.tilt-3d .plan__name { transform: translateZ(28px); transition: transform 200ms var(--e-micro); }
+
+/* Slower reveal for pricing cards */
+.pricing [data-anim].is-visible {
+  transition: opacity var(--t-struct) var(--e-struct), transform var(--t-struct) var(--e-struct);
+}
+
+/* ---------- Masked reveal (clip-path wipe) ---------- */
+.mask-reveal { clip-path: inset(0 100% 0 0); transition: clip-path var(--t-struct) var(--e-struct); }
+.mask-reveal.is-visible { clip-path: inset(0 0 0 0); }
+
+/* ---------- Per-word text reveal ---------- */
+.tr-word { display: inline-block; overflow: hidden; vertical-align: top; }
+.tr-word > span {
+  display: inline-block; transform: translateY(110%);
+  transition: transform var(--t-struct) var(--e-struct);
+  transition-delay: var(--w-delay, 0ms);
+}
+.text-reveal.is-visible .tr-word > span { transform: translateY(0); }
+
+/* ---------- Scramble target ---------- */
+.scramble.is-scrambling { color: var(--accent); overflow: hidden; }
+
+/* ---------- Magnetic buttons (composed via CSS vars) ---------- */
+.magnetic { --mx: 0px; --my: 0px; }
+.magnetic:hover { transform: translate(var(--mx), var(--my)); }
+
+/* FAQ icon toggle: x-mark rotated 45deg → plus when open */
+.faq__item.is-open .faq__icon { transform: rotate(45deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  main { perspective: none !important; }
+  .cursor, .cursor-dot { display: none !important; }
+  body.has-custom-cursor { cursor: auto; }
+  [data-anim], .mask-reveal { opacity: 1 !important; transform: none !important; clip-path: none !important; transition: none !important; }
+  .tr-word > span { transform: none !important; }
+  .magnetic, .tilt-3d { transform: none !important; }
+}
