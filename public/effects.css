@@ -5,15 +5,6 @@
  * ======================================================= */
 
 /* ---------- Scroll fade effect (CSS transition removed — JS rAF handles smooth updates) ---------- */
-html { scroll-behavior: smooth; }
-body { background: var(--bg); }
-main {
-  perspective: 900px;
-  perspective-origin: 50% 0%;
-}
-main > section {
-  will-change: opacity;
-}
 
 /* Global "transition on everything" for interactive + structural bits. */
 a, button, select, .bento__node, .plan, .quote, .logos li,
@@ -85,11 +76,11 @@ a, button, select, .bento__node, .plan, .quote, .logos li,
 }
 
 /* ---------- Scroll reveal (cards / sections) — 3D transforms ---------- */
-[data-anim] { opacity: 0; will-change: transform, opacity; }
-[data-anim="up"]    { transform: translateY(44px) rotateX(6deg); }
-[data-anim="scale"] { transform: scale(0.88) translateZ(-20px); }
-[data-anim="left"]  { transform: translateX(-46px) rotateY(5deg); }
-[data-anim="right"] { transform: translateX(46px) rotateY(-5deg); }
+[data-anim] { opacity: 0; }
+[data-anim="up"]    { transform: translateY(44px) perspective(900px) rotateX(6deg); }
+[data-anim="scale"] { transform: scale(0.88) perspective(900px) translateZ(-20px); }
+[data-anim="left"]  { transform: translateX(-46px) perspective(900px) rotateY(5deg); }
+[data-anim="right"] { transform: translateX(46px) perspective(900px) rotateY(-5deg); }
 [data-anim].is-visible {
   opacity: 1; transform: none;
   transition: opacity var(--t-struct) var(--e-struct),
@@ -130,7 +121,7 @@ html:not(.js-anim) .reveal { opacity: 1 !important; transform: none !important; 
 .text-reveal.is-visible .tr-word > span { transform: translateY(0); }
 
 /* ---------- Scramble target ---------- */
-.scramble.is-scrambling { color: var(--accent); overflow: hidden; }
+.scramble.is-scrambling { color: var(--accent); overflow: hidden; contain: layout style paint; }
 
 /* ---------- Magnetic buttons (composed via CSS vars) ---------- */
 .magnetic { --mx: 0px; --my: 0px; }

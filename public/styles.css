@@ -6,8 +6,8 @@
   --c-ink: #172B36;
 
   --bg: var(--c-ink);
-  --surface: var(--c-ink);
-  --surface-2: rgba(17, 76, 90, 0.25);
+  --surface: rgba(17, 76, 90, 0.15);
+  --surface-2: rgba(17, 76, 90, 0.3);
   --text: var(--c-light);
   --muted: rgba(217, 232, 226, 0.6);
   --accent: var(--c-mist);
@@ -71,7 +71,6 @@ img, svg { display: block; }
   padding: 11px 20px; border-radius: 999px; border: 1px solid transparent;
   font-family: var(--font-body); font-weight: 600; font-size: 0.95rem; cursor: pointer;
   transition: transform var(--t-micro) var(--e-micro), background-color var(--t-micro) var(--e-micro), border-color var(--t-micro) var(--e-micro), color var(--t-micro) var(--e-micro);
-  will-change: transform;
 }
 .btn:hover { transform: translateY(-2px); }
 .btn:active { transform: translateY(0); }
@@ -131,7 +130,6 @@ section { padding: 84px 0; }
   background: var(--surface); border: 1px solid var(--line);
   display: flex; flex-direction: column; gap: 8px; overflow: hidden; cursor: pointer;
   transition: transform var(--t-micro) var(--e-micro), border-color var(--t-micro) var(--e-micro), background-color var(--t-micro) var(--e-micro);
-  will-change: transform;
 }
 .bento__node--lg { grid-row: span 2; }
 .bento__node--wide { grid-column: span 2; }
@@ -200,7 +198,11 @@ section { padding: 84px 0; }
 .step p { color: var(--muted); margin: 0; font-size: 0.95rem; }
 
 /* ---------- Integrations ---------- */
-.integrations__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+.integrations__grid { display: flex; flex-direction: column; gap: 14px; }
+.integrations__row { display: flex; gap: 14px; flex-wrap: wrap; }
+.integrations__row .integration { flex: 1; min-width: 140px; }
+.integrations__row--rtl { direction: rtl; }
+.integrations__row--rtl .integration { direction: ltr; }
 .integration { display: flex; align-items: center; gap: 12px; padding: 18px 20px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
 .integration__dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); flex: none; }
 .integration span { font-family: var(--font-head); font-weight: 600; font-size: 0.95rem; }

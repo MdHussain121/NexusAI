@@ -22,6 +22,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" as="style">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="/styles.css">
@@ -188,14 +189,18 @@
           <p>Native connectors for the platforms your data already lives in.</p>
         </header>
         <div class="integrations__grid">
-          <div class="integration" data-anim="up"><span class="integration__dot" aria-hidden="true"></span><span>PostgreSQL</span></div>
-          <div class="integration" data-anim="up" style="--anim-delay:60ms"><span class="integration__dot" aria-hidden="true"></span><span>Snowflake</span></div>
-          <div class="integration" data-anim="up" style="--anim-delay:120ms"><span class="integration__dot" aria-hidden="true"></span><span>BigQuery</span></div>
-          <div class="integration" data-anim="up" style="--anim-delay:180ms"><span class="integration__dot" aria-hidden="true"></span><span>Kafka</span></div>
-          <div class="integration" data-anim="up" style="--anim-delay:240ms"><span class="integration__dot" aria-hidden="true"></span><span>Databricks</span></div>
-          <div class="integration" data-anim="up" style="--anim-delay:300ms"><span class="integration__dot" aria-hidden="true"></span><span>S3</span></div>
-          <div class="integration" data-anim="up" style="--anim-delay:360ms"><span class="integration__dot" aria-hidden="true"></span><span>dbt</span></div>
-          <div class="integration" data-anim="up" style="--anim-delay:420ms"><span class="integration__dot" aria-hidden="true"></span><span>Airflow</span></div>
+          <div class="integrations__row">
+            <div class="integration" data-anim="up"><span class="integration__dot" aria-hidden="true"></span><span>PostgreSQL</span></div>
+            <div class="integration" data-anim="up" style="--anim-delay:60ms"><span class="integration__dot" aria-hidden="true"></span><span>Snowflake</span></div>
+            <div class="integration" data-anim="up" style="--anim-delay:120ms"><span class="integration__dot" aria-hidden="true"></span><span>BigQuery</span></div>
+            <div class="integration" data-anim="up" style="--anim-delay:180ms"><span class="integration__dot" aria-hidden="true"></span><span>Kafka</span></div>
+          </div>
+          <div class="integrations__row integrations__row--rtl">
+            <div class="integration" data-anim="up" style="--anim-delay:180ms"><span class="integration__dot" aria-hidden="true"></span><span>Databricks</span></div>
+            <div class="integration" data-anim="up" style="--anim-delay:120ms"><span class="integration__dot" aria-hidden="true"></span><span>S3</span></div>
+            <div class="integration" data-anim="up" style="--anim-delay:60ms"><span class="integration__dot" aria-hidden="true"></span><span>dbt</span></div>
+            <div class="integration" data-anim="up"><span class="integration__dot" aria-hidden="true"></span><span>Airflow</span></div>
+          </div>
         </div>
       </div>
     </section>

@@ -12,10 +12,16 @@
     reveals.forEach(function (el) {
       el.style.setProperty("--reveal-i", el.getAttribute("data-reveal") || 0);
     });
-    // Trigger on next frame so transitions apply.
+    // Pre-mark mask-reveal elements already in viewport so they don't rely
+    // solely on the IntersectionObserver (which Chrome may not fire promptly).
+    var maskReveals = document.querySelectorAll(".mask-reveal");
     requestAnimationFrame(function () {
       requestAnimationFrame(function () {
         reveals.forEach(function (el) { el.classList.add("is-in"); });
+        maskReveals.forEach(function (el) {
+          var r = el.getBoundingClientRect();
+          if (r.top < innerHeight && r.bottom > 0) el.classList.add("is-visible");
+        });
       });
     });
     var loader = document.getElementById("loader");
@@ -79,21 +85,22 @@
   // Mutates only nodeValue -> stays within the isolation guarantee (no reflow
   // of siblings, no parent re-render). Numeric/symbol glyphs only.
   var GLYPHS = "0123456789$\u20ac\u20b9.,";
-  function scrambleNode(node, target, frames) {
+  function scrambleNode(node, target) {
     if (!node || !node.firstChild) return;
     if (reduceMotion) { node.firstChild.nodeValue = target; return; }
     if (node.__raf) cancelAnimationFrame(node.__raf);
-    var steps = frames || 12, frame = 0;
+    var t0 = performance.now();
+    var DURATION = 500;
     function tick() {
-      frame++;
-      var progress = frame / steps;
+      var elapsed = performance.now() - t0;
+      var progress = Math.min(elapsed / DURATION, 1);
       var revealCount = Math.floor(target.length * progress);
       var out = "";
       for (var i = 0; i < target.length; i++) {
         out += i < revealCount ? target[i] : GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
       }
       node.firstChild.nodeValue = out;
-      if (frame < steps) { node.__raf = requestAnimationFrame(tick); }
+      if (progress < 1) { node.__raf = requestAnimationFrame(tick); }
       else { node.firstChild.nodeValue = target; node.__raf = null; }
     }
     node.__raf = requestAnimationFrame(tick);
@@ -111,7 +118,7 @@
       var amountText = amount === 0 ? "0" : formatAmount(amount, priceState.currency);
       // nodeValue updates avoid re-creating elements -> no reflow of siblings
       if (nodes.symbol) nodes.symbol.firstChild.nodeValue = region.symbol;
-      if (animate) { scrambleNode(nodes.amount, amountText, 12); }
+      if (animate) { scrambleNode(nodes.amount, amountText); }
       else { nodes.amount.firstChild.nodeValue = amountText; }
       if (nodes.per) nodes.per.firstChild.nodeValue = per;
     });

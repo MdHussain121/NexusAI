@@ -4,11 +4,10 @@ const app = express();
 
 const port = process.env.PORT || 5000;
 
-// Serve the landing page assets from /public
-app.use(express.static(path.join(__dirname, "public")));
-
-// Serve the provided SVG pack (asset compliance) under /SVG
-app.use("/SVG", express.static(path.join(__dirname, "SVG")));
+// Cache static assets aggressively; HTML is not cached so updates apply immediately.
+var oneYear = 365 * 24 * 60 * 60 * 1000;
+app.use(express.static(path.join(__dirname, "public"), { maxAge: oneYear }));
+app.use("/SVG", express.static(path.join(__dirname, "SVG"), { maxAge: oneYear }));
 
 // JSON health endpoint (kept for monitoring / tests)
 app.get("/api/health", (req, res) => {

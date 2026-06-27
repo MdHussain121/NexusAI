@@ -5,6 +5,47 @@
   var finePointer = window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
   function safe(fn) { try { fn(); } catch (e) {} }
 
+  /* Shared RAF scheduler for scrambles — single loop instead of per-element */
+  var _scItems = [], _scRAF = null;
+  function _scTickAll() {
+    for (var i = _scItems.length - 1; i >= 0; i--) {
+      var item = _scItems[i];
+      if (item.cancelled) { _scItems.splice(i, 1); continue; }
+      var elapsed = performance.now() - item.t0;
+      var q = item.q, el = item.el, parts = [], done = 0;
+      for (var j = 0; j < q.length; j++) {
+        var c = q[j];
+        if (elapsed >= c.end) { done++; parts.push(c.to); }
+        else if (elapsed >= c.start) {
+          if (!/^[a-zA-Z0-9]$/.test(c.to)) parts.push(c.to);
+          else {
+            if (!c.char || Math.random() < 0.28) {
+              var pool = c.to >= "A" && c.to <= "Z" ? item.upper : item.lower;
+              if (!pool.length) pool = item.all;
+              c.char = pool[Math.floor(Math.random() * pool.length)];
+            }
+            parts.push(c.char);
+          }
+        } else parts.push(c.from);
+      }
+      var out = parts.join("");
+      if (out !== item._last) { el.textContent = out; item._last = out; }
+      if (done === q.length) {
+        el.classList.remove("is-scrambling");
+        el._scItem = null;
+        _scItems.splice(i, 1);
+      }
+    }
+    if (_scItems.length) { _scRAF = requestAnimationFrame(_scTickAll); }
+    else { _scRAF = null; }
+  }
+  function _scStart(el, q, pools) {
+    el.classList.add("is-scrambling");
+    el._scItem = { el: el, q: q, t0: performance.now(), upper: pools.upper, lower: pools.lower, all: pools.all };
+    _scItems.push(el._scItem);
+    if (!_scRAF) { _scRAF = requestAnimationFrame(_scTickAll); }
+  }
+
   /* =======================================================
    * 1. Custom cursor
    * ===================================================== */
@@ -36,7 +77,7 @@
       p.style.setProperty("--p-dy", Math.sin(angle) * dist + "px");
       document.body.appendChild(p);
       p.addEventListener("animationend", function () { p.remove(); });
-    }, 20);
+    }, 80);
 
     addEventListener("click", function () {
       ring.classList.add("is-click");
@@ -109,7 +150,7 @@
       entries.forEach(function (entry) {
         entry.target.classList.toggle("is-visible", entry.isIntersecting);
       });
-    }, { threshold: 0.15, rootMargin: "0px 0px -6% 0px" });
+    }, { threshold: 0, rootMargin: "0px 0px -5% 0px" });
     targets.forEach(function (t) { io.observe(t); });
   }
 
@@ -146,9 +187,10 @@
       el.setAttribute("data-scramble", "");
     });
 
-    document.querySelectorAll("[data-scramble]").forEach(function (el) {
+    var scrambleEls = document.querySelectorAll("[data-scramble]");
+    scrambleEls.forEach(function (el) {
       el.classList.add("scramble");
-      var original = el.textContent, frameReq, frame, queue;
+      var original = el.textContent;
       var poolChars = (function () {
         var seen = {}, chars = "";
         for (var i = 0; i < original.length; i++) {
@@ -182,10 +224,11 @@
         var q = [];
         for (var i = 0; i < original.length; i++) {
           if (/^[a-zA-Z0-9]$/.test(original[i])) {
+            var s = staggered ? Math.random() * 80 : 0;
             q.push({
               from: shuffled[i], to: original[i],
-              start: staggered ? Math.floor(Math.random() * 18) : 0,
-              end: staggered ? Math.floor(Math.random() * 18) + 18 : Math.floor(Math.random() * 15) + 10,
+              start: s,
+              end: s + 250,
               char: null
             });
           } else {
@@ -199,88 +242,45 @@
         var now = Date.now();
         if (el._scCooldown && now - el._scCooldown < 300) return;
         el._scCooldown = now;
-        el.style.maxHeight = el.offsetHeight + "px";
-        el.style.overflow = "hidden";
-        var rng = document.createRange(); rng.selectNodeContents(el);
-        if (rng.getClientRects().length <= 1) el.style.whiteSpace = "nowrap";
-        rng.detach();
-        var old = el.textContent;
-        queue = buildAnagramQueue(true);
-        cancelAnimationFrame(frameReq); frame = 0;
-        el.classList.add("is-scrambling"); update();
-      }
-      function update() {
-        var out = "", done = 0;
-        for (var i = 0; i < queue.length; i++) {
-          var q = queue[i];
-          if (frame >= q.end) { done++; out += q.to; }
-          else if (frame >= q.start) {
-            if (!/^[a-zA-Z0-9]$/.test(q.to)) { out += q.to; }
-            else {
-              if (!q.char || Math.random() < 0.28) {
-                var pickFrom = q.to >= "A" && q.to <= "Z" ? upperPool : lowerPool;
-                if (pickFrom.length === 0) pickFrom = poolChars;
-                q.char = pickFrom[Math.floor(Math.random() * pickFrom.length)];
-              }
-              out += q.char;
-            }
-          } else out += q.from;
-        }
-        el.textContent = out;
-        if (done === queue.length) { el.classList.remove("is-scrambling"); el.style.maxHeight = ""; el.style.overflow = ""; el.style.whiteSpace = ""; return; }
-        frame++; frameReq = requestAnimationFrame(update);
+        if (el._scItem) { el._scItem.cancelled = true; el._scItem = null; }
+        var pools = { upper: upperPool, lower: lowerPool, all: poolChars };
+        _scStart(el, buildAnagramQueue(true), pools);
       }
 
       function runReverse() {
         var now = Date.now();
         if (el._scCooldown && now - el._scCooldown < 300) return;
         el._scCooldown = now;
-        el.style.maxHeight = el.offsetHeight + "px";
-        el.style.overflow = "hidden";
-        var rng = document.createRange(); rng.selectNodeContents(el);
-        if (rng.getClientRects().length <= 1) el.style.whiteSpace = "nowrap";
-        rng.detach();
-        var old = el.textContent;
-        queue = buildAnagramQueue(false);
-        cancelAnimationFrame(frameReq); frame = 0;
-        el.classList.add("is-scrambling"); updateReverse();
-      }
-      function updateReverse() {
-        var out = "", done = 0;
-        for (var i = 0; i < queue.length; i++) {
-          var q = queue[i];
-          if (frame >= q.end) { done++; out += q.to; }
-          else if (frame >= q.start) {
-            if (!/^[a-zA-Z0-9]$/.test(q.to)) { out += q.to; }
-            else {
-              if (!q.char || Math.random() < 0.28) {
-                var pickFrom = q.to >= "A" && q.to <= "Z" ? upperPool : lowerPool;
-                if (pickFrom.length === 0) pickFrom = poolChars;
-                q.char = pickFrom[Math.floor(Math.random() * pickFrom.length)];
-              }
-              out += q.char;
-            }
-          } else out += q.from;
-        }
-        el.textContent = out;
-        if (done === queue.length) { el.classList.remove("is-scrambling"); el.style.maxHeight = ""; el.style.overflow = ""; el.style.whiteSpace = ""; return; }
-        frame++; frameReq = requestAnimationFrame(updateReverse);
+        if (el._scItem) { el._scItem.cancelled = true; el._scItem = null; }
+        var pools = { upper: upperPool, lower: lowerPool, all: poolChars };
+        _scStart(el, buildAnagramQueue(false), pools);
       }
 
       el.__scramble = run;
       el.__unscramble = runReverse;
-      el.addEventListener("mouseenter", run);
     });
+
+    // Event delegation: one listener on <main> instead of per-element
+    var mainEl = document.querySelector("main");
+    if (mainEl) {
+      mainEl.addEventListener("mouseenter", function (e) {
+        var t = e.target;
+        while (t && t !== mainEl) {
+          if (t.__scramble) { t.__scramble(); return; }
+          t = t.parentNode;
+        }
+      }, true);
+    }
 
     if ("IntersectionObserver" in window) {
       var scIO = new IntersectionObserver(function (entries) {
         entries.forEach(function (entry) {
           var el = entry.target;
-          if (entry.isIntersecting) { if (el.__scramble) el.__scramble(); }
-          else { if (el.__unscramble) el.__unscramble(); }
+          if (entry.isIntersecting) { if (el.__scramble) setTimeout(el.__scramble, Math.random() * 120); }
+          else { if (el.__unscramble) setTimeout(el.__unscramble, Math.random() * 120); }
         });
       }, { threshold: 0.1, rootMargin: "0px 0px -4% 0px" });
-      document.querySelectorAll("[data-scramble]").forEach(function (el) {
+      scrambleEls.forEach(function (el) {
         scIO.observe(el);
       });
     }
@@ -484,16 +484,10 @@
       buildThreads();
     });
 
-    if ("IntersectionObserver" in window) {
-      var obs = new IntersectionObserver(function (entries) {
-        running = entries[0].isIntersecting;
-        if (running) animate();
-      }, { threshold: 0 });
-      var sentinel = document.createElement("div");
-      sentinel.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;pointer-events:none";
-      document.body.appendChild(sentinel);
-      obs.observe(sentinel);
-    }
+    addEventListener("visibilitychange", function () {
+      if (document.hidden) { running = false; }
+      else if (!running) { running = true; animate(); }
+    });
   }
 
   /* ---------- Boot ---------- */
